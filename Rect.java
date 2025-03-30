@@ -8,6 +8,7 @@ class Rect extends Shape {
 
     public Rect(int x, int y) {
         super(x, y, 10); // 設定深度為 10
+        setSelected(false);
     }
 
     @Override

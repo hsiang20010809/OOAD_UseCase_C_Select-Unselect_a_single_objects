@@ -8,6 +8,7 @@ class Oval extends Shape {
 
     public Oval(int x, int y) {
         super(x, y, 5); // 設定深度為 5
+        setSelected(false);
     }
 
     @Override

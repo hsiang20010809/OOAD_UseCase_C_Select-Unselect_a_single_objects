@@ -1,18 +1,16 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 
 public class WorkflowEditor {
     private Canvas canvas;
-    private Mode mode;
     private JButton rectButton;
     private JButton ovalButton;
-    private JComboBox<String> linkTypeComboBox; // 新增下拉選單
+    private JButton selectButton;
+    private JComboBox<String> linkTypeComboBox; // 下拉選單
 
     public WorkflowEditor() {
-        // 初始化畫布與模式
+        // 初始化畫布
         canvas = new Canvas();
-        mode = Mode.SELECT;
 
         // 建立視窗
         JFrame frame = new JFrame("Workflow Editor");
@@ -27,7 +25,7 @@ public class WorkflowEditor {
         JPanel toolbar = new JPanel();
         rectButton = new JButton("Rect");
         ovalButton = new JButton("Oval");
-        JButton selectButton = new JButton("Select");
+        selectButton = new JButton("Select");
         linkTypeComboBox = new JComboBox<>(new String[]{"Association", "Generalization", "Composition"}); // 新增選擇連結類型的下拉選單
 
         toolbar.add(rectButton);
@@ -38,19 +36,19 @@ public class WorkflowEditor {
 
         // 設定按鈕事件
         rectButton.addActionListener(e -> {
-            mode = Mode.RECT;
+            canvas.setMode(Canvas.Mode.RECT); // 切換到 RECT 模式
             updateButtonColors();
             System.out.println("Mode switched to: RECT");
         });
 
         ovalButton.addActionListener(e -> {
-            mode = Mode.OVAL;
+            canvas.setMode(Canvas.Mode.OVAL); // 切換到 OVAL 模式
             updateButtonColors();
             System.out.println("Mode switched to: OVAL");
         });
 
         selectButton.addActionListener(e -> {
-            mode = Mode.SELECT;
+            canvas.setMode(Canvas.Mode.SELECT); // 切換到 SELECT 模式
             updateButtonColors();
             System.out.println("Mode switched to: SELECT");
         });
@@ -74,32 +72,20 @@ public class WorkflowEditor {
             }
         });
 
-        // 設定滑鼠事件
-        canvas.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (mode == Mode.RECT) {
-                    canvas.addShape(new Rect(e.getX(), e.getY()));
-                } else if (mode == Mode.OVAL) {
-                    canvas.addShape(new Oval(e.getX(), e.getY()));
-                } else if (mode == Mode.SELECT) {
-                    canvas.selectShapeAt(e.getX(), e.getY());
-                }
-            }
-        });
-        
-
         // 顯示視窗
         frame.setVisible(true);
     }
 
     // 更新按鈕顏色，顯示當前模式
     private void updateButtonColors() {
-        rectButton.setBackground(mode == Mode.RECT ? Color.BLACK : null);
-        rectButton.setForeground(mode == Mode.RECT ? Color.WHITE : Color.BLACK);
+        rectButton.setBackground(canvas.getMode() == Canvas.Mode.RECT ? Color.BLACK : null);
+        rectButton.setForeground(canvas.getMode() == Canvas.Mode.RECT ? Color.WHITE : Color.BLACK);
 
-        ovalButton.setBackground(mode == Mode.OVAL ? Color.BLACK : null);
-        ovalButton.setForeground(mode == Mode.OVAL ? Color.WHITE : Color.BLACK);
+        ovalButton.setBackground(canvas.getMode() == Canvas.Mode.OVAL ? Color.BLACK : null);
+        ovalButton.setForeground(canvas.getMode() == Canvas.Mode.OVAL ? Color.WHITE : Color.BLACK);
+
+        selectButton.setBackground(canvas.getMode() == Canvas.Mode.SELECT ? Color.BLACK : null);
+        selectButton.setForeground(canvas.getMode() == Canvas.Mode.SELECT ? Color.WHITE : Color.BLACK);
     }
 
     public static void main(String[] args) {

@@ -33,6 +33,19 @@ class Link {
                 drawDiamondArrow(g, endPort.x, endPort.y, startPort.x, startPort.y);
                 break;
         }
+
+        // 繪製起點小黑色正方形
+        if (startShape != null && startShape.isSelected()) {
+            g.setColor(Color.BLACK);
+            g.fillRect(startPort.x - 5, startPort.y - 5, 10, 10);
+        }
+
+        // 繪製終點小黑色正方形
+        if (endShape != null && endShape.isSelected()) {
+            g.setColor(Color.BLACK);
+            g.fillRect(endPort.x - 5, endPort.y - 5, 10, 10);
+        }
+
     }
 
     public Shape getStartShape() {
@@ -63,7 +76,7 @@ class Link {
         int y4 = (int) (y1 - arrowSize * Math.sin(angle - Math.PI / 6));
         int[] xPoints = {x1, x3, x4};
         int[] yPoints = {y1, y3, y4};
-        g.fillPolygon(xPoints, yPoints, 3);
+        g.drawPolygon(xPoints, yPoints, 3);
     }
 
     private void drawDiamondArrow(Graphics g, int x1, int y1, int x2, int y2) {
@@ -77,7 +90,7 @@ class Link {
         int y5 = (int) (y3 - arrowSize * Math.sin(angle));
         int[] xPoints = {x1, x3, x5, x4};
         int[] yPoints = {y1, y3, y5, y4};
-        g.fillPolygon(xPoints, yPoints, 4);
+        g.drawPolygon(xPoints, yPoints, 4);
     }
 }
 

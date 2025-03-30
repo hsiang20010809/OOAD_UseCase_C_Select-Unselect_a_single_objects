@@ -9,11 +9,19 @@ class Canvas extends JPanel {
     private List<Link> links = new ArrayList<>();
     private Shape startShape = null;
     private Point startPort = null;
-    private Shape selectedShape = null; // 用於記錄目前選取的物件
-    private LinkType currentLinkType = LinkType.ASSOCIATION; // 預設連結類型
-    private Rectangle selectionRect = null; // 用於框選的矩形區域
+    private Shape selectedShape = null;
+    private LinkType currentLinkType = LinkType.ASSOCIATION;
+    private Rectangle selectionRect = null;
+    private boolean isDragging = false; // 用於判斷是否正在拖曳
+
+    enum Mode {
+        RECT, OVAL, SELECT
+    }
+
+    private Mode currentMode = Mode.SELECT; // 預設為選取模式
 
     public void addShape(Shape shape) {
+        clearSelection();
         shapes.add(shape);
         shapes.sort((s1, s2) -> Integer.compare(s2.getDepth(), s1.getDepth()));
         repaint();
@@ -22,25 +30,20 @@ class Canvas extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-    
-        // 繪製所有圖形
+
         for (Shape shape : shapes) {
-            shape.draw(g, shape.isSelected()); // 傳遞物件的選取狀態
+            shape.draw(g, shape.isSelected());
         }
-    
-        // 繪製所有連接線
+
         for (Link link : links) {
             link.draw(g);
-    
-            // 如果起點物件被選取，繪製黑色小正方形
             if (link.getStartShape() != null && link.getStartShape().isSelected()) {
                 Point startPort = link.getStartPort();
                 g.setColor(Color.BLACK);
-                g.fillRect(startPort.x - 5, startPort.y - 5, 10, 10); // 繪製小正方形
+                g.fillRect(startPort.x - 5, startPort.y - 5, 10, 10);
             }
         }
-    
-        // 如果框選矩形存在，繪製框選區域
+
         if (selectionRect != null) {
             g.setColor(Color.BLUE);
             ((Graphics2D) g).setStroke(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{5.0f}, 0.0f));
@@ -52,74 +55,90 @@ class Canvas extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                boolean shapeClicked = false;
+                Point clickPoint = e.getPoint();
+                isDragging = false; // 初始化為非拖曳狀態
 
-                // 檢查是否點擊到某個物件
-                for (Shape shape : shapes) {
-                    if (shape.contains(e.getX(), e.getY())) {
-                        shapeClicked = true;
-                        selectedShape = shape; // 設定選取的物件
-                        shape.setSelected(true); // 更新物件的選取狀態
-
-                        // 如果是第一次點擊，設定為起始物件
-                        if (startShape == null) {
-                            startShape = shape;
-                            startPort = shape.getClosestPort(e.getX(), e.getY());
-                        }
-                    } else {
-                        shape.setSelected(false); // 未被點擊的物件取消選取
-                    }
-                }
-
-                // 如果未點擊到任何物件，清除選取狀態並準備框選
-                if (!shapeClicked) {
+                if (currentMode == Mode.RECT) {
+                    Rect rect = new Rect(clickPoint.x, clickPoint.y);
+                    addShape(rect);
+                } else if (currentMode == Mode.OVAL) {
+                    Oval oval = new Oval(clickPoint.x, clickPoint.y);
+                    addShape(oval);
+                } else if (currentMode == Mode.SELECT) {
                     selectedShape = null;
-                    startShape = null; // 清除起始物件
-                    startPort = null;  // 清除起始連接點
-                    selectionRect = new Rectangle(e.getX(), e.getY(), 0, 0); // 啟動框選模式
-                }
+                    boolean shapeClicked = false;
 
-                repaint(); // 觸發重新繪製
-            }
+                    for (int i = shapes.size() - 1; i >= 0; i--) {
+                        Shape shape = shapes.get(i);
+                        if (shape.contains(clickPoint.x, clickPoint.y)) {
+                            shapeClicked = true;
 
+                            // 清除其他物件的選取狀態
+                            clearSelection();
 
-           
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                // 如果框選矩形存在，處理框選邏輯
-                if (selectionRect != null) {
-                    for (Shape shape : shapes) {
-                        if (selectionRect.intersects(shape.getBounds())) {
+                            // 設定當前物件為選取狀態
+                            selectedShape = shape;
                             shape.setSelected(true);
-                        } else {
-                            shape.setSelected(false);
-                        }
-                    }
-                    selectionRect = null; // 清除框選矩形
-                } else if (startShape != null) {
-                    // 檢查是否點擊到終點物件
-                    for (Shape shape : shapes) {
-                        if (shape.contains(e.getX(), e.getY()) && shape != startShape) {
-                            Point endPort = shape.getClosestPort(e.getX(), e.getY());
-                            Link link = new Link(startShape, startPort, shape, endPort, currentLinkType);
-                            links.add(link); // 加入連接線
+
+                            // 如果是連結操作，設定起始連結點
+                            if (startShape == null) {
+                                startShape = shape;
+                                startPort = shape.getClosestPort(clickPoint.x, clickPoint.y);
+                            }
+
                             break;
                         }
                     }
-                    // 清除起始物件和起始連接點
+
+                    if (!shapeClicked) {
+                        // 如果沒有點擊到任何物件，啟動框選模式
+                        clearSelection();
+                        selectionRect = new Rectangle(clickPoint.x, clickPoint.y, 0, 0);
+                    }
+                }
+
+                repaint();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (currentMode == Mode.SELECT) {
+                    if (selectionRect != null) {
+                        // 框選模式：選取框內的所有物件
+                        for (Shape shape : shapes) {
+                            if (selectionRect.intersects(shape.getBounds())) {
+                                shape.setSelected(true);
+                            } else {
+                                shape.setSelected(false);
+                            }
+                        }
+                        selectionRect = null;
+                    } else if (isDragging && startShape != null) {
+                        // 拖曳時建立連結
+                        for (Shape shape : shapes) {
+                            if (shape.contains(e.getX(), e.getY()) && shape != startShape) {
+                                Point endPort = shape.getClosestPort(e.getX(), e.getY());
+                                Link link = new Link(startShape, startPort, shape, endPort, currentLinkType);
+                                links.add(link);
+                                break;
+                            }
+                        }
+                    }
+
+                    // 清除連結起始點
                     startShape = null;
                     startPort = null;
                 }
 
-                repaint(); // 觸發重新繪製
+                repaint();
             }
-
         });
 
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
-                // 更新框選矩形大小
+                isDragging = true; // 設定為拖曳狀態
+
                 if (selectionRect != null) {
                     int x = Math.min(selectionRect.x, e.getX());
                     int y = Math.min(selectionRect.y, e.getY());
@@ -133,16 +152,23 @@ class Canvas extends JPanel {
         });
     }
 
-    public void selectShapeAt(int x, int y) {
-        selectedShape = null; // 初始化為未選擇任何物件
-        for (int i = shapes.size() - 1; i >= 0; i--) {
-            Shape shape = shapes.get(i);
-            if (shape.contains(x, y)) {
-                selectedShape = shape; // 選取最上層的物件
-                break;
-            }
+    private void clearSelection() {
+        for (Shape shape : shapes) {
+            shape.setSelected(false);
         }
-        repaint(); // 更新畫布，顯示選取狀態
+        selectedShape = null;
+        startShape = null;
+        startPort = null;
+    }
+
+    public void setMode(Mode mode) {
+        this.currentMode = mode;
+        clearSelection();
+        repaint();
+    }
+
+    public Mode getMode() {
+        return currentMode;
     }
 
     public void setCurrentLinkType(LinkType type) {
